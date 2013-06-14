@@ -2,6 +2,7 @@ import urllib2,urllib
 import csv
 import settings
 import mimetools,itertools,mimetypes
+import base64
 
 def UnicodeDictReader(utf8_data, **kwargs):
   csv_reader = csv.DictReader(utf8_data, **kwargs)
@@ -59,8 +60,9 @@ class MultiPartForm(object):
               'Content-Disposition: file; name="%s"; filename="%s"' % \
                  (field_name, filename),
               'Content-Type: %s' % content_type,
+              'Content-Transfer-Encoding: BASE64',
               '',
-              body,
+              base64.b64encode(body),
             ]
             for field_name, filename, content_type, body in self.files
             )
@@ -70,7 +72,7 @@ class MultiPartForm(object):
         flattened = list(itertools.chain(*parts))
         flattened.append('--' + self.boundary + '--')
         flattened.append('')
-        return '\r\n'.join(flattened)
+        return u'\r\n'.join(flattened)
 
 
 def post_record(r):
@@ -80,9 +82,9 @@ def post_record(r):
   for (k,v) in r.items():
     form.add_field(k,v)
   form.add_field("auth_key",settings.auth_key)
-  form.add_file("file_data",fn,open(fn))
+  form.add_file("file_data",fn,open(fn,"rb"))
   request=urllib2.Request(settings.url)
-  body=str(form)
+  body=str(form).encode('utf-8')
   request.add_header("Content-type", form.get_content_type())
   request.add_header("Content-length", len(body))  
   request.add_data(body)
